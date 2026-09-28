@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Workout Timer</title>
+<style>
+:root{
+ --bg:#ffffff;--card:#ffffff;--text:#171717;--muted:#737373;
+ --line:#e5e5e5;--accent:#111827;--accentText:#ffffff;--soft:#f5f5f5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:transparent;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+.card{max-width:520px;margin:0 auto;padding:22px;border:1px solid var(--line);border-radius:24px;background:var(--card)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+.title{font-size:18px;font-weight:750}.mode{font-size:12px;color:var(--muted)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;background:var(--soft);border-radius:12px;margin-bottom:22px}
+.tabs button,.preset,button{font:inherit;cursor:pointer}
+.tabs button{border:0;background:transparent;padding:9px;border-radius:9px;color:var(--muted)}
+.tabs button.active{background:var(--card);color:var(--text);box-shadow:0 1px 3px #00000012}
+.timer{width:210px;height:210px;border-radius:50%;margin:0 auto 20px;display:grid;place-items:center;border:9px solid var(--line);transition:border-color .2s}
+.time{font-size:48px;line-height:1;font-weight:750;letter-spacing:-2px;font-variant-numeric:tabular-nums;text-align:center}
+.status{text-align:center;color:var(--muted);font-size:13px;margin-top:8px}
+.controls{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.primary{border:0;background:var(--accent);color:var(--accentText);padding:12px 22px;border-radius:12px;font-weight:650}
+.secondary{border:1px solid var(--line);background:var(--card);color:var(--text);padding:12px 18px;border-radius:12px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.presets{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:17px 0}
+.preset{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:9px;padding:8px 11px;font-size:12px}
+.round{display:flex;justify-content:center;gap:7px;align-items:center;margin-top:15px;color:var(--muted);font-size:13px}
+.round strong{color:var(--text)}
+.note{text-align:center;color:var(--muted);font-size:12px;min-height:18px;margin:14px 0 0}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+label{font-size:12px;color:var(--muted)}
+input{width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:var(--card);color:var(--text)}
+.themeRow{display:flex;justify-content:center;margin-top:16px}
+.themeRow select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--card);color:var(--text);font:inherit;font-size:12px}
+@media(max-width:390px){.card{padding:16px}.timer{width:185px;height:185px}.time{font-size:42px}}
+</style>
+</head>
+<body>
+<div class="card" id="app">
+  <div class="top"><div class="title">Workout Timer</div><div class="mode" id="modeLabel">Work</div></div>
+
+  <div class="tabs">
+    <button id="workTab" class="active" type="button">Work</button>
+    <button id="restTab" type="button">Rest</button>
+  </div>
+
+  <div class="timer" id="timer">
+    <div>
+      <div class="time" id="display">01:00</div>
+      <div class="status" id="status">Ready</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="start" type="button">Start</button>
+    <button class="secondary" id="pause" type="button" disabled>Pause</button>
+    <button class="secondary" id="reset" type="button">Reset</button>
+  </div>
+
+  <div class="presets">
+    <button class="preset" data-seconds="30" type="button">30 sec</button>
+    <button class="preset" data-seconds="60" type="button">1 min</button>
+    <button class="preset" data-seconds="90" type="button">1:30</button>
+    <button class="preset" data-seconds="120" type="button">2 min</button>
+    <button class="preset" data-seconds="180" type="button">3 min</button>
+  </div>
+
+  <div class="settings">
+    <label>Work (minutes)<input id="workMin" type="number" min="0" max="99" value="1"></label>
+    <label>Rest (minutes)<input id="restMin" type="number" min="0" max="99" value="1"></label>
+  </div>
+
+  <div class="round">Round <strong id="round">1</strong></div>
+  <div class="note" id="note">Set your interval and press Start.</div>
+
+  <div class="themeRow">
+    <select id="theme" aria-label="Theme">
+      <option value="midnight">Midnight</option>
+      <option value="redline">Redline</option>
+      <option value="forest">Forest</option>
+      <option value="cream">Cream</option>
+      <option value="lavender">Lavender</option>
+    </select>
+  </div>
+</div>
+
+<script>
+(() => {
+  const root=document.documentElement, $=id=>document.getElementById(id);
+  const themes={
+    midnight:{bg:"#0b0b0b",card:"#111111",text:"#ffffff",muted:"#999999",line:"#292929",accent:"#ffffff",accentText:"#111111",soft:"#181818"},
+    redline:{bg:"#0d0d0d",card:"#121212",text:"#ffffff",muted:"#a1a1a1",line:"#2b2b2b",accent:"#ef4444",accentText:"#ffffff",soft:"#1a1a1a"},
+    forest:{bg:"#0b1410",card:"#101c15",text:"#f5f7f5",muted:"#9ca9a0",line:"#26352c",accent:"#4ade80",accentText:"#08210f",soft:"#142019"},
+    cream:{bg:"#faf7f2",card:"#fffdf9",text:"#29231e",muted:"#81766c",line:"#e4ddd4",accent:"#8b5e3c",accentText:"#ffffff",soft:"#f0ebe4"},
+    lavender:{bg:"#f8f6ff",card:"#ffffff",text:"#29233d",muted:"#77718a",line:"#e4def3",accent:"#7c5cff",accentText:"#ffffff",soft:"#f1edfb"}
+  };
+  const params=new URLSearchParams(location.search);
+  const initial=(params.get("theme")||"midnight").toLowerCase();
+  const themeSelect=$("theme");
+
+  function applyTheme(name){
+    const t=themes[name]||themes.midnight;
+    Object.entries(t).forEach(([k,v])=>root.style.setProperty("--"+k,v));
+    themeSelect.value=themes[name]?name:"midnight";
+  }
+  applyTheme(initial);
+  themeSelect.addEventListener("change",()=>{
+    applyTheme(themeSelect.value);
+    const url=new URL(location.href);
+    url.searchParams.set("theme",themeSelect.value);
+    history.replaceState({}, "", url);
+  });
+
+  const display=$("display"),status=$("status"),note=$("note"),modeLabel=$("modeLabel");
+  const start=$("start"),pause=$("pause"),reset=$("reset"),roundEl=$("round");
+  const workMin=$("workMin"),restMin=$("restMin"),workTab=$("workTab"),restTab=$("restTab");
+  let mode="work",running=false,timerId=null,remaining=60,round=1;
+
+  const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
+  const fmt=n=>`${String(Math.floor(n/60)).padStart(2,"0")}:${String(n%60).padStart(2,"0")}`;
+  const secondsFor=m=>clamp((parseInt(m.value,10)||0)*60,0,5940);
+
+  function beep(){
+    try{
+      const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+      const c=new C(),o=c.createOscillator(),g=c.createGain();
+      o.frequency.value=740;g.gain.value=.055;o.connect(g);g.connect(c.destination);o.start();
+      setTimeout(()=>o.frequency.value=980,110);
+      setTimeout(()=>{o.stop();c.close()},230);
+    }catch(e){}
+  }
+
+  function update(){
+    display.textContent=fmt(remaining);
+    status.textContent=running?"Running":remaining===0?"Done":"Ready";
+    modeLabel.textContent=mode==="work"?"Work":"Rest";
+    roundEl.textContent=round;
+    start.disabled=running;pause.disabled=!running;
+    workTab.classList.toggle("active",mode==="work");
+    restTab.classList.toggle("active",mode==="rest");
+  }
+  function loadMode(newMode){mode=newMode;remaining=mode==="work"?secondsFor(workMin):secondsFor(restMin);update()}
+  function stop(){if(timerId){clearInterval(timerId);timerId=null}running=false;update()}
+  function finish(){
+    remaining=0;stop();beep();
+    if(mode==="work"){mode="rest";remaining=secondsFor(restMin);note.textContent="Work complete — rest interval loaded."}
+    else{round++;mode="work";remaining=secondsFor(workMin);note.textContent="Rest complete — next round loaded."}
+    update();
+  }
+
+  start.addEventListener("click",()=>{
+    if(running)return;
+    if(remaining<=0)remaining=mode==="work"?secondsFor(workMin):secondsFor(restMin);
+    running=true;note.textContent=mode==="work"?"Workout interval running.":"Rest interval running.";update();
+    timerId=setInterval(()=>{if(remaining<=1)finish();else{remaining--;update()}},1000);
+  });
+  pause.addEventListener("click",()=>{stop();note.textContent="Paused."});
+  reset.addEventListener("click",()=>{stop();round=1;remaining=mode==="work"?secondsFor(workMin):secondsFor(restMin);note.textContent="Timer reset.";update()});
+  workTab.addEventListener("click",()=>{if(!running){loadMode("work");note.textContent="Work interval selected."}});
+  restTab.addEventListener("click",()=>{if(!running){loadMode("rest");note.textContent="Rest interval selected."}});
+  document.querySelectorAll(".preset").forEach(btn=>btn.addEventListener("click",()=>{
+    if(running)return;remaining=clamp(parseInt(btn.dataset.seconds,10)||0,0,5940);note.textContent="Preset selected.";update();
+  }));
+  [workMin,restMin].forEach(input=>input.addEventListener("change",()=>{
+    if(!running){remaining=mode==="work"?secondsFor(workMin):secondsFor(restMin);update()}
+  }));
+  update();
+})();
+</script>
+</body>
+</html>
